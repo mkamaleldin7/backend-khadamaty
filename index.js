@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import { handleSignup } from './customer.js';
+import { verifyOtp } from './customer.js';
+import { getServices } from './customer.js';
 
 dotenv.config();
 
@@ -15,7 +18,11 @@ app.listen(port, () => {
     console.log(`Server running on port http://localhost:${port}`);
 });
 
-mongoose.connect(process.env.MONGODB_URI);
+app.get("/", (req, res) => {
+    res.send("Hello World!");
+});
+
+mongoose.connect(process.env.MONGODB_URI, { dbName: 'khadamatyDB' });
 
 
 const db = mongoose.connection;
@@ -23,4 +30,15 @@ db.on("error", console.error.bind(console, "connection error:"));
 db.once("open", () => {
     console.log("Connected to MongoDB");
 });
+
+
+app.post("/customer/signup", handleSignup);
+app.post("/customer/verify-otp", verifyOtp);
+
+app.get("/customer/services", getServices);
+
+
+
+
+
 
