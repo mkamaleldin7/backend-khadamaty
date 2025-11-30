@@ -32,6 +32,7 @@ export const ServiceProvider = mongoose.model("ServiceProvider", serviceProvider
 
 const serviceSchema = new mongoose.Schema({
     name: mongoose.Schema.Types.String,
+    category: mongoose.Schema.Types.String,
     description: mongoose.Schema.Types.String,
     price: mongoose.Schema.Types.Number,
     priceType: mongoose.Schema.Types.String,
@@ -42,3 +43,20 @@ const serviceSchema = new mongoose.Schema({
 });
 
 export const Service = mongoose.model("Service", serviceSchema);
+
+const requestSchema = new mongoose.Schema({
+    serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "Service" },
+    customerId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" },
+    status: {
+        type: String,
+        enum: ["active", "in progress", "cancelled", "completed"],
+        default: "active"
+    },
+    datetime: { type: mongoose.Schema.Types.Date },
+    notes: mongoose.Schema.Types.String,
+    createdAt: { type: mongoose.Schema.Types.Date, default: Date.now },
+    updatedAt: { type: mongoose.Schema.Types.Date, default: Date.now },
+}
+);
+
+export const Request = mongoose.model("Request", requestSchema);

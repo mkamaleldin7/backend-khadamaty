@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import { handleSignup } from './customer.js';
 import { verifyOtp } from './customer.js';
 import { getServices } from './customer.js';
+import { requestService } from './customer.js';
 
 dotenv.config();
 
@@ -34,8 +35,8 @@ db.once("open", () => {
 
 app.post("/customer/signup", handleSignup);
 app.post("/customer/verify-otp", verifyOtp);
-
 app.get("/customer/services", getServices);
+app.post("/customer/book", requestService);
 
 
 

@@ -2,10 +2,32 @@ import { Customer } from "./schemas.js";
 import bcrypt from "bcrypt";
 import nodemailer from "nodemailer";
 import { Service } from "./schemas.js";
+import dotenv from "dotenv";
+import { Request } from "./schemas.js";
+import { request } from "express";
+
+dotenv.config();
+export const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
+
+
 
 export async function handleSignup(req, res) {
     try {
         const { name, email, password, phone } = req.body;
+        const found = await Customer.findOne({ email: email });
+        if (found) {
+            res.status(400).json({
+                success: false,
+                message: "This email is already registered",
+                data: null
+            })
+        }
         const hashedPassword = await bcrypt.hash(password, 10);
         const otp = generateOTP();
         const otpExpiry = new Date(Date.now() + 60 * 1000); // 1 minute expiry
@@ -24,38 +46,31 @@ function generateOTP() {
     return Math.floor(100000 + Math.random() * 900000);
 }
 
-async function sendOTP(otp, email) {
+export async function sendOTP(otp, email) {
     try {
-        const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT,
-            secure: false, // true for 465, false for other ports
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
-
-        const info = await transporter.sendMail({
-            from: '"Khadamaty" <' + process.env.SMTP_USER + '>',
+        const mailOptions = {
+            from: `"Khadamaty" <${process.env.EMAIL_USER}>`,
             to: email,
-            subject: "Your OTP Code",
-            text: `Your OTP code is ${otp}`,
-            html: `<b>Your OTP code is ${otp}</b>`,
-        });
+            subject: "Your OTP from Khadamaty",
+            html: `<p>This is your One-Time-Password that will expire in a minute: <strong>${otp}</strong></p>`,
+        };
 
-        console.log("Message sent: %s", info.messageId);
+        const info = await transporter.sendMail(mailOptions);
+        console.log("Email sent:", info.messageId);
+
+        return true;
     } catch (error) {
         console.error("Error sending email:", error);
+        return false;
     }
 }
 
 export async function verifyOtp(req, res) {
     try {
-        const { otp } = req.body;
-        const customer = await Customer.findOne({ otp: otp, otpExpiry: { $gt: Date.now() } });
+        const { id, otp } = req.body;
+        const customer = await Customer.findOne({ id: id, otpExpiry: { $gt: Date.now() } });
         if (!customer) {
-            return res.status(400).json({ message: "Invalid OTP" });
+            return res.status(400).json({ message: "Invalid or expired OTP" });
         }
         customer.isVerified = true;
         await customer.save();
@@ -72,10 +87,30 @@ export async function verifyOtp(req, res) {
 
 export async function getServices(req, res) {
     try {
-        const services = await Service.find();
+        const { category } = req.query;
+        const services = await Service.find({ category: category });
         res.status(200).json({ message: "Services fetched successfully", services: services });
     } catch (error) {
         console.error("Error fetching services:", error);
         res.status(500).json({ message: "Error fetching services" });
     }
 }
+
+
+export async function requestService(req, res) {
+    try {
+        const { serviceId, datetime, notes, customerId } = req.body;
+        const newRequest = new Request({ serviceId, datetime, notes, customerId })
+        await newRequest.save();
+        res.status(201).json({
+            success: true,
+            message: "Booking successful",
+            data: newRequest,
+        });
+    }
+    catch (error) {
+        console.error("Error fetching services:", error);
+        res.status(500).json({ message: "Error fetching services" });
+    }
+}
+
